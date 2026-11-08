@@ -67,8 +67,6 @@ public class Gassy {
         GassyGasComponent.init();
         GasRegistry.GAS_COMPONENTS.register(modEventBus);
         GasRegistry.GASES.register(modEventBus);
-
-
         NeoForge.EVENT_BUS.register(this);
 
 
