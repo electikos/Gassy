@@ -45,12 +45,11 @@ public class GasStackRenderer implements IIngredientRenderer<GasStack> {
 
         Minecraft minecraft = Minecraft.getInstance();
 
-        TextureAtlasSprite sprite = minecraft
-                .getTextureAtlas(GassyAtlases.GAS_ATLAS)
-                .apply(gas.getTexture());
+        TextureAtlasSprite sprite = minecraft.getTextureAtlas(GassyAtlases.GAS_ATLAS).apply(gas.getTexture());
 
         int tint = gas.getTint();
 
+        float alpha = ((tint >> 24) & 0xFF) / 255.0F;
         float red = ((tint >> 16) & 0xFF) / 255.0F;
         float green = ((tint >> 8) & 0xFF) / 255.0F;
         float blue = (tint & 0xFF) / 255.0F;
@@ -59,7 +58,7 @@ public class GasStackRenderer implements IIngredientRenderer<GasStack> {
                 0, 0, 0,
                 16, 16,
                 sprite,
-                red, green, blue, 1.0F
+                red, green, blue, alpha
         );
 
     }

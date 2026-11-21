@@ -10,19 +10,19 @@ public class GassyGasComponent {
     public static final GasComponentType<Double> HEAT_TYPE =
             new GasComponentType<>(
                     Codec.DOUBLE,
-                    (temperature, tooltip) -> tooltip.add(Component.translatable(temperature + "°k"))
+                    (temperature, tooltip) -> tooltip.add(Component.literal(temperature + "°k"))
             );
 
     public static final GasComponentType<Double> PRESSURE_TYPE =
             new GasComponentType<>(
                     Codec.DOUBLE,
-                    (pressure, tooltip) -> tooltip.add(Component.translatable(pressure + " Pa"))
+                    (pressure, tooltip) -> tooltip.add(Component.literal(pressure + " Pa"))
             );
 
     public static final GasComponentType<Double> RADIOACTIVITY_TYPE =
             new GasComponentType<>(
                     Codec.DOUBLE,
-                    (radioactivity, tooltip) -> tooltip.add(Component.translatable(radioactivity + " mSv"))
+                    (radioactivity, tooltip) -> tooltip.add(Component.literal(radioactivity + " mSv"))
             );
 
     public static final DeferredHolder<GasComponentType<?>, GasComponentType<Double>> HEAT =
