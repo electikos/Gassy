@@ -10,13 +10,15 @@ public class GasComponentType<T> {
 
     private final Codec<T> codec;
     private final GasComponentRenderer<T> renderer;
+    private final GasComponentBehaviour behaviour;
 
     public GasComponentType(Codec<T> codec) {
-        this(codec, null);
+        this(codec, null, null);
     }
-    public GasComponentType(Codec<T> codec, GasComponentRenderer<T> renderer) {
+    public GasComponentType(Codec<T> codec, GasComponentRenderer<T> renderer, GasComponentBehaviour behave) {
         this.codec = Objects.requireNonNull(codec);
         this.renderer = renderer;
+        this.behaviour = behave;
     }
 
     public Codec<T> getCodec() {
@@ -27,4 +29,7 @@ public class GasComponentType<T> {
         return Optional.ofNullable(this.renderer);
     }
 
+    public GasComponentBehaviour getBehaviour(){
+        return this.behaviour;
+    }
 }

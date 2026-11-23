@@ -2,7 +2,9 @@ package org.electron.gassy.gas;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import org.electron.gassy.gas.component.GasComponentBehaviour;
 import org.electron.gassy.gas.component.GasComponentType;
+import org.electron.gassy.handler.GasHandlerMode;
 import org.electron.gassy.handler.IGasTankHandler;
 
 import java.util.Map;
@@ -11,12 +13,14 @@ public class GasTank implements IGasTankHandler {
 
     private GasStack stack;
     private final long capacity;
+    private GasHandlerMode mode;
 
-    public GasTank(long capacity, GasStack stack) {
+    public GasTank(long capacity, GasStack stack, GasHandlerMode mode) {
         this.capacity = capacity;
         GasStack maybe = stack.copy();
         maybe.setAmount(Math.min(maybe.getAmount(), capacity));
         this.stack = maybe.copy();
+        this.mode = mode;
     }
 
     @Override
@@ -53,166 +57,143 @@ public class GasTank implements IGasTankHandler {
     }
 
     @Override
-    public <T> long addC(GasStack stack, boolean simulate) {
-        if (!simulate && !isEmpty()) {
-            if (stack.isSameGas(this.stack)) {
-                for (Map.Entry<GasComponentType<?>, Object> entry : stack.getAllComponents().entrySet()) {
-                    GasComponentType<?> type = entry.getKey();
-
-                    if (this.stack.getAllComponents().containsKey(type)) {
-                        Object oldValue = this.stack.getAllComponents().get(type);
-                        Object newValue = entry.getValue();
-
-                        if (oldValue instanceof Float oldFloat && newValue instanceof Float newFloat) {
-                            setFloat(type, oldFloat + newFloat);
-                        } else if (oldValue instanceof Double oldDouble && newValue instanceof Double newDouble) {
-                            setDouble(type, oldDouble + newDouble);
-                        } else if (oldValue instanceof Integer oldInt && newValue instanceof Integer newInt) {
-                            setInt(type, oldInt + newInt);
-                        } else if (oldValue instanceof Long oldLong && newValue instanceof Long newLong) {
-                            setLong(type, oldLong + newLong);
-                        }
-                    }
+    public long insert(GasStack stack, boolean simulate){
+        if(simulate){
+            if (canInsert()) {
+                if (stack.getAmount() <= leftCapacity()) {
+                    if (this.stack.isSameGas(stack)) return Math.min(stack.getAmount(), leftCapacity());
+                } else {
+                    return 0;
                 }
-
-                long newAmount = Math.min(leftCapacity(), stack.getAmount());
-                this.stack.affect(newAmount);
-                return newAmount;
             }
             return 0;
         }
-        else if(!simulate){
-            GasStack maybe = stack.copy();
-            maybe.setAmount(Math.min(maybe.getAmount(), capacity));
-            this.stack = maybe.copy();
-            return this.stack.getAmount();
-        }
         else{
-            return Math.min(leftCapacity(), stack.getAmount());
-        }
-    }
+            if (canInsert()) {
+                if (stack.getAmount() <= leftCapacity() && !this.stack.isEmpty()) {
+                    if (this.stack.isSameGas(stack)) {
+                        long accepted = Math.min(stack.getAmount(), leftCapacity());
+                        for (Map.Entry<GasComponentType<?>, Object> entry : stack.getAllComponents().entrySet()) {
 
-    public <T> long addR(GasStack stack, boolean simulate){
-        if (!simulate && !isEmpty()) {
-            if (stack.isSameGas(this.stack)) {
-                for (Map.Entry<GasComponentType<?>, Object> entry : stack.getAllComponents().entrySet()) {
-                    GasComponentType<?> type = entry.getKey();
+                            GasComponentType<?> type = entry.getKey();
+                            Object incoming = entry.getValue();
+                            Object current = this.stack.getAllComponents().get(type);
 
-                    if (this.stack.getAllComponents().containsKey(type)) {
-                        Object oldValue = this.stack.getAllComponents().get(type);
-                        Object newValue = entry.getValue();
+                            mergeAndSet(type, current, incoming, this.stack.getAmount(), stack.getAmount());
 
-                        if (oldValue instanceof Float oldFloat && newValue instanceof Float newFloat) {
-                            setFloat(type, newFloat);
-                        } else if (oldValue instanceof Double oldDouble && newValue instanceof Double newDouble) {
-                            setDouble(type, newDouble);
-                        } else if (oldValue instanceof Integer oldInt && newValue instanceof Integer newInt) {
-                            setInt(type, newInt);
-                        } else if (oldValue instanceof Long oldLong && newValue instanceof Long newLong) {
-                            setLong(type, newLong);
                         }
+
+                        this.stack.grow(accepted);
+
+                        return accepted;
                     }
+                } else if (this.stack.isEmpty()) {
+                    long accepted = Math.min(leftCapacity(), stack.getAmount());
+                    this.stack = stack.copy();
+                    this.stack.setAmount(accepted);
+                    return accepted;
+                } else {
+                    return 0;
                 }
-                long newAmount = Math.min(leftCapacity(), stack.getAmount());
-                this.stack.affect(newAmount);
-                return newAmount;
             }
             return 0;
         }
-        else if(!simulate){
-            GasStack maybe = stack.copy();
-            maybe.setAmount(Math.min(maybe.getAmount(), capacity));
-            this.stack = maybe.copy();
-            return this.stack.getAmount();
-        }
-        else{
-            return Math.min(leftCapacity(), stack.getAmount());
-        }
+
     }
 
     @Override
-    public <T> long addK(GasStack stack, boolean simulate) {
-        if (!simulate && !isEmpty()) {
-            if (stack.isSameGas(this.stack)){
-                for (Map.Entry<GasComponentType<?>, Object> entry : stack.getAllComponents().entrySet()) {
-                    GasComponentType<?> type = entry.getKey();
-
-                    if (this.stack.getAllComponents().containsKey(type)) {
-                        Object oldValue = this.stack.getAllComponents().get(type);
-                        Object newValue = entry.getValue();
-
-                        if (oldValue instanceof Float oldFloat && newValue instanceof Float newFloat) {
-                            setFloat(type, oldFloat);
-                        } else if (oldValue instanceof Double oldDouble && newValue instanceof Double newDouble) {
-                            setDouble(type, oldDouble);
-                        } else if (oldValue instanceof Integer oldInt && newValue instanceof Integer newInt) {
-                            setInt(type, oldInt);
-                        } else if (oldValue instanceof Long oldLong && newValue instanceof Long newLong) {
-                            setLong(type, oldLong);
-                        }
-                    }
-                }
-                long newAmount = Math.min(leftCapacity(), stack.getAmount());
-                this.stack.affect(newAmount);
-                return newAmount;
+    public GasStack extract(long amount,boolean simulate){
+        if(simulate){
+            if (canExtract()) {
+                GasStack newStack = this.stack.copy();
+                newStack.setAmount(Math.min(this.stack.getAmount(), amount));
+                return newStack;
             }
-            return 0;
-        }
-        else if(!simulate){
-            GasStack maybe = stack.copy();
-            maybe.setAmount(Math.min(maybe.getAmount(), capacity));
-            this.stack = maybe.copy();
-            return this.stack.getAmount();
+            GasStack newStack = this.stack.copy();
+            newStack.setAmount(0);
+            return newStack;
+
         }
         else{
-            return Math.min(leftCapacity(), stack.getAmount());
+            if (canExtract()) {
+                if (this.stack.getAmount() >= amount) {
+                    GasStack newStack = this.stack.copy();
+                    for (Map.Entry<GasComponentType<?>, Object> entry : this.stack.getAllComponents().entrySet()) {
+
+                        GasComponentType<?> type = entry.getKey();
+                        Object incoming = entry.getValue();
+                        Object current = this.stack.getAllComponents().get(type);
+
+                        extractedAndSet(newStack, type, current, incoming, this.stack.getAmount(), amount);
+                        extractAndSet(type, current, incoming, this.stack.getAmount(), amount);
+
+                    }
+
+                    this.stack.shrink(amount);
+                    newStack.setAmount(amount);
+
+                    return newStack;
+                } else if (this.stack.getAmount() < amount && this.stack.getAmount() > 0) {
+                    GasStack newStack = this.stack.copy();
+                    for (Map.Entry<GasComponentType<?>, Object> entry : this.stack.getAllComponents().entrySet()) {
+
+                        GasComponentType<?> type = entry.getKey();
+                        Object incoming = entry.getValue();
+                        Object current = this.stack.getAllComponents().get(type);
+
+                        extractedAndSet(newStack, type, current, incoming, this.stack.getAmount(), amount);
+                        extractAndSet(type, current, incoming, this.stack.getAmount(), amount);
+
+                    }
+                    newStack.setAmount(amount - this.stack.getAmount());
+                    this.stack.setAmount(GasStack.EMPTY);
+                    return newStack;
+                } else {
+                    GasStack newStack = this.stack.copy();
+                    newStack.setAmount(0);
+                    return newStack;
+                }
+            }
+            GasStack newStack = this.stack.copy();
+            newStack.setAmount(0);
+            return newStack;
         }
+    }
+
+
+    private <T> void mergeAndSet(GasComponentType<T> type, Object current, Object incoming, long currentAmount, long incomingAmount) {
+        T newValue = type.getBehaviour().merge((T) current, (T) incoming, currentAmount, incomingAmount);
+        this.stack.setComponent(type, newValue);
+    }
+
+    private <T> void extractAndSet(GasComponentType<T> type, Object current, Object incoming, long currentAmount, long incomingAmount) {
+        T newValue = type.getBehaviour().extractFromVolume((T) current, (T) incoming, currentAmount, incomingAmount);
+        this.stack.setComponent(type, newValue);
+    }
+
+    private <T> void extractedAndSet(GasStack stack,GasComponentType<T> type, Object current, Object incoming, long currentAmount, long incomingAmount) {
+        T newValue = type.getBehaviour().extractedFromVolume((T) current, (T) incoming, currentAmount, incomingAmount);
+        stack.setComponent(type, newValue);
     }
 
     @Override
-    public <T> long addM(GasStack stack, boolean simulate) {
-        if (!simulate && !isEmpty()){
-            if (stack.isSameGas(this.stack)) {
-                long newAmount = Math.min(leftCapacity(), stack.getAmount());
-                for (Map.Entry<GasComponentType<?>, Object> entry : stack.getAllComponents().entrySet()) {
-                    GasComponentType<?> type = entry.getKey();
-
-                    if (this.stack.getAllComponents().containsKey(type)) {
-                        Object oldValue = this.stack.getAllComponents().get(type);
-                        Object newValue = entry.getValue();
-
-                        if (oldValue instanceof Float oldFloat && newValue instanceof Float newFloat) {
-                            setFloat(type, ((oldFloat * (float) this.stack.getAmount()) + (newFloat * (float) newAmount)) / (float) (this.stack.getAmount() + newAmount));
-                        } else if (oldValue instanceof Double oldDouble && newValue instanceof Double newDouble) {
-                            setDouble(type, ((oldDouble * (double) this.stack.getAmount()) + (newDouble * (double) newAmount)) / (double) (this.stack.getAmount() + newAmount));
-                        } else if (oldValue instanceof Integer oldInt && newValue instanceof Integer newInt) {
-                            setInt(type, ((oldInt * (int) this.stack.getAmount()) + (newInt * (int) newAmount)) / (int) (this.stack.getAmount() + newAmount));
-                        } else if (oldValue instanceof Long oldLong && newValue instanceof Long newLong) {
-                            setLong(type, ((oldLong * this.stack.getAmount()) + (newLong * newAmount)) / (this.stack.getAmount() + newAmount));
-                        }
-                    }
-                }
-
-                this.stack.affect(newAmount);
-                return newAmount;
-            }
-            return 0;
-        }
-        else if(!simulate){
-            GasStack maybe = stack.copy();
-            maybe.setAmount(Math.min(maybe.getAmount(), capacity));
-            this.stack = maybe.copy();
-            return this.stack.getAmount();
-        }
-        else{
-            return Math.min(leftCapacity(), stack.getAmount());
-        }
+    public boolean canInsert(){
+        return this.mode == GasHandlerMode.INPUT || this.mode == GasHandlerMode.BOTH;
     }
 
-    public long insert(long in){
-        long newAmount = Math.min(leftCapacity(), in);
-        this.stack.affect(newAmount);
-        return newAmount;
+    @Override
+    public boolean canExtract(){
+        return this.mode == GasHandlerMode.OUTPUT || this.mode == GasHandlerMode.BOTH;
+    }
+
+    @Override
+    public GasHandlerMode getMode(){
+        return this.mode;
+    }
+
+    @Override
+    public void setMode(GasHandlerMode mode) {
+        this.mode = mode;
     }
 
 
@@ -247,6 +228,7 @@ public class GasTank implements IGasTankHandler {
     public static final Codec<GasTank> CODEC =
             RecordCodecBuilder.create(instance -> instance.group(
                     Codec.LONG.fieldOf("capacity").forGetter(GasTank::getCapacity),
-                    GasCodec.CODEC.fieldOf("stack").forGetter(GasTank::getGasStack)
+                    GasCodec.CODEC.fieldOf("stack").forGetter(GasTank::getGasStack),
+                    GasHandlerMode.CODEC.fieldOf("mode").forGetter(GasTank::getMode)
             ).apply(instance, GasTank::new));
 }

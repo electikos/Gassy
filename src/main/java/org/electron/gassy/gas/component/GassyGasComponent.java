@@ -7,22 +7,28 @@ import org.electron.gassy.gas.GasRegistry;
 
 
 public class GassyGasComponent {
+
+    public static final GassyNumericComponentsBehaviour NUMERIC_BEHAVIOUR = new GassyNumericComponentsBehaviour();
+
     public static final GasComponentType<Double> HEAT_TYPE =
             new GasComponentType<>(
                     Codec.DOUBLE,
-                    (temperature, tooltip) -> tooltip.add(Component.literal(temperature + "°k"))
+                    (temperature, tooltip) -> tooltip.add(Component.literal(temperature + "°k")),
+                    NUMERIC_BEHAVIOUR
             );
 
     public static final GasComponentType<Double> PRESSURE_TYPE =
             new GasComponentType<>(
                     Codec.DOUBLE,
-                    (pressure, tooltip) -> tooltip.add(Component.literal(pressure + " Pa"))
+                    (pressure, tooltip) -> tooltip.add(Component.literal(pressure + " Pa")),
+                    NUMERIC_BEHAVIOUR
             );
 
     public static final GasComponentType<Double> RADIOACTIVITY_TYPE =
             new GasComponentType<>(
                     Codec.DOUBLE,
-                    (radioactivity, tooltip) -> tooltip.add(Component.literal(radioactivity + " mSv"))
+                    (radioactivity, tooltip) -> tooltip.add(Component.literal(radioactivity + " mSv")),
+                    NUMERIC_BEHAVIOUR
             );
 
     public static final DeferredHolder<GasComponentType<?>, GasComponentType<Double>> HEAT =

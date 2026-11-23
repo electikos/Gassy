@@ -100,14 +100,17 @@ public class GasStack {
     }
 
 
-        public Map<GasComponentType<?>, Object> getAllComponents() {
-            Map<GasComponentType<?>, Object> allComponents =
-                    new HashMap<>(gas.getAllDefaultComponents());
+    public Map<GasComponentType<?>, Object> getAllComponents() {
+        Map<GasComponentType<?>, Object> allComponents = new HashMap<>(gas.getAllDefaultComponents());
+                allComponents.putAll(components);
+                return allComponents;
+    }
 
-            allComponents.putAll(components);
+    public Map<GasComponentType<?>, Object> getCustomComponents() {
+        return new HashMap<>(components);
+    }
 
-            return allComponents;
-        }
+
 
 
     public GasStack copy() {

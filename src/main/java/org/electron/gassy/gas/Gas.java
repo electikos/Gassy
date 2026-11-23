@@ -39,6 +39,7 @@ public class Gas {
     public boolean hasDefaultComponent(GasComponentType<?> type) {
         return defaultComponents.containsKey(type);
     }
+
     public Map<GasComponentType<?>, Object> getAllDefaultComponents(){
         return Map.copyOf(defaultComponents);
     }

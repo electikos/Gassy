@@ -10,10 +10,17 @@ public interface IGasTankHandler {
 
     boolean isEmpty();
 
-    <T> long addR(GasStack stack, boolean simulate);
-    <T> long addK(GasStack stack, boolean simulate);
-    <T> long addM(GasStack stack, boolean simulate);
-    <T> long addC(GasStack stack, boolean simulate);
+    boolean canInsert();
+
+    boolean canExtract();
+
+    GasHandlerMode getMode();
+
+    void setMode(GasHandlerMode mode);
+
+    long insert(GasStack stack, boolean simulate);
+
+    GasStack extract(long amount, boolean simulate);
 
     void drain();
 
